@@ -1,0 +1,3 @@
+﻿  Game.cpp
+D:\Sae\7mo trimestre\Motor de videojuegos\Motor\Motor\Game.cpp(118,25): warning C4305: '=': truncamiento de 'double' a 'float'
+  Motor.vcxproj -> D:\Sae\7mo trimestre\Motor de videojuegos\Motor\x64\Debug\Motor.exe
