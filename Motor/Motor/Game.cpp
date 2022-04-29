@@ -1,262 +1,288 @@
 #include "Game.h"
-#include "SDL.h"
-
-const int THICKNESS = 15;
-const float	PADDLEH = 100.0f;
+#include "SpriteComponent.h"
+#include "Actor.h"
+#include "Ship.h"
+#include "BGSpriteComponent.h"
 
 Game::Game() :
-    m_Window(nullptr),
-    m_IsRunning(true)
+	m_Window(nullptr),
+	m_Renderer(nullptr),
+	m_IsRunning(true),
+	m_TicksCount(0)
 {
-    
 }
 
-bool Game::Initialize(){
-    int sdlResult = SDL_Init(SDL_INIT_VIDEO);
-    if (sdlResult != 0){
-        SDL_Log("Unable to initialize SDL: %s", SDL_GetError());
-        return false;
-    }
-    m_Window = SDL_CreateWindow(
-        "Motor SAE",
-        100,//coordenadas de x, esquina superior izquierda
-        100,//coordenadas de y, esquina superior izquierda
-        1024,//Ancho de la pantalla
-        768,//Altura de la pantalla
-        0//Bandera(0 para una bandera)
-    );
+bool Game::Initialize()
+{
+	int sdlResult = SDL_Init(SDL_INIT_VIDEO);
 
-    if (!m_Window){
-        SDL_Log("Failed to create window %s", SDL_GetError());
-        return false;
-    }
+	if (sdlResult != 0)
+	{
+		SDL_Log("Unable to initialize SDL: %s", SDL_GetError());
+		return false;
+	}
 
-    m_Renderer = SDL_CreateRenderer(
-        m_Window,
-        -1,
-        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
-    );
+	m_Window = SDL_CreateWindow(
+		"Motor SAE",
+		100,	// Coordenadas de x, esquina superior izquierda
+		100,	// Coordenadas de y, esquina superior izquierda
+		1024,   // Ancho de la pantalla
+		768,	// Altura de la pantalla
+		0		// Bandera (0 para ninguna bandera)	
+	);
 
-    m_BallPos.x = 1024 / 2;
-    m_BallPos.y = 768 / 2;
-    m_LeftPaddlePos.x = 20.f;
-    m_LeftPaddlePos.y = 768 / 2;
-    m_RightPaddlePos.x = 1024 - 20.f;
-    m_RightPaddlePos.y = 768 / 2;
-    m_BallVel.x = -200.0f;
-    m_BallVel.y = 235.0f;
+	if (!m_Window)
+	{
+		SDL_Log("Failed to create window: %s", SDL_GetError());
+		return false;
+	}
 
-    return true;
+	m_Renderer = SDL_CreateRenderer(
+		m_Window,
+		-1,
+		SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
+	);
+
+	if (IMG_Init(IMG_INIT_PNG) == 0)
+	{
+		SDL_Log("Unable to initialize SDL_Image: %s", SDL_GetError());
+		return false;
+	}
+
+	LoadData();
+
+	m_TicksCount = SDL_GetTicks();
+
+	return true;
 }
 
-void Game::RunLoop(){
-    while (m_IsRunning){
-        ProcessingInput();
-        UpdateGame();
-        GenerateOutput();
-    }
+void Game::RunLoop()
+{
+	while (m_IsRunning)
+	{
+		ProcessingInput();
+		UpdateGame();
+		GenerateOutput();
+	}
 }
 
-void Game::Shutdown(){
-    SDL_DestroyWindow(m_Window);
-    SDL_DestroyRenderer(m_Renderer);
-    SDL_Quit();
+void Game::Shutdown()
+{
+	UnloadData();
+	IMG_Quit();
+	SDL_DestroyWindow(m_Window);
+	SDL_DestroyRenderer(m_Renderer);
+	SDL_Quit();
 }
 
-void Game::ProcessingInput(){
-
-    //Eventos de mouse
-
-    SDL_Event event;//Almacena todos los inputs
-    
-    while (SDL_PollEvent(&event)) {//Se revisan todos los eventos que sucedieron entre la última llamada a SDL_PollEvent y esta
-        switch (event.type){
-            case SDL_QUIT:
-                m_IsRunning = false; 
-                break;
-            default:
-                break;
-        }
-    }
-
-    //Eventos del teclado
-    const Uint8* state = SDL_GetKeyboardState(NULL);
-    if (state[SDL_SCANCODE_ESCAPE]){
-        m_IsRunning = false;
-    }
-
-    m_LPaddleDir = 0;
-    m_RPaddleDir = 0;
-    //Movimiento paleta Izquierda
-    if (state[SDL_SCANCODE_W]){
-        // En SDL, +y es hacia abajo
-        m_LPaddleDir -= 1;
-    }
-    if (state[SDL_SCANCODE_S]){
-        m_LPaddleDir += 1;
-    }
-    //Movimiento paleta derecha
-    if (state[SDL_SCANCODE_I]) {
-        // En SDL, +y es hacia abajo
-        m_RPaddleDir -= 1;
-    }
-    if (state[SDL_SCANCODE_K]) {
-        m_RPaddleDir += 1;
-    }
+void Game::AddActor(Actor* actor)
+{
+	if (m_UpdatingActors)
+	{
+		m_PendingActors.emplace_back(actor);
+	}
+	else
+	{
+		m_Actors.emplace_back(actor);
+	}
 }
 
-void Game::UpdateGame(){
-    // Frame limiting
-    // Nuestro objetivo es que el juego corra a 60fps.
-    // Esto significa que cada cuadro tiene que durar 16.6ms
-    while (!SDL_TICKS_PASSED(SDL_GetTicks(), m_TicksCount + 16));
+void Game::RemoveActor(Actor* actor)
+{
+	auto iter = std::find(m_PendingActors.begin(), m_PendingActors.end(), actor);
+	if (iter != m_PendingActors.end())
+	{
+		std::iter_swap(iter, m_PendingActors.end() - 1);
+		m_PendingActors.pop_back();
+	}
 
-    float deltaTime = (SDL_GetTicks() - m_TicksCount) / 1000.0f;
-    m_TicksCount = SDL_GetTicks();
-
-    if (deltaTime > 0.05f){
-        deltaTime = 0.05;
-    }
-    //Movimiento con paleta izquierda
-    if (m_LPaddleDir != 0){
-        m_LeftPaddlePos.y += m_LPaddleDir * 300.0f * deltaTime;
-        if (m_LeftPaddlePos.y < (PADDLEH / 2.0f + THICKNESS)){
-            m_LeftPaddlePos.y = PADDLEH / 2.0f + THICKNESS;
-        }else if (m_LeftPaddlePos.y > 768.0f - PADDLEH / 2.0 - THICKNESS){
-            m_LeftPaddlePos.y = 769.0f - PADDLEH / 2.0 - THICKNESS;
-        }
-    }
-    //Movimiento con paleta derecha
-    if (m_RPaddleDir != 0) {
-        m_RightPaddlePos.y += m_RPaddleDir * 300.0f * deltaTime;
-        if (m_RightPaddlePos.y < (PADDLEH / 2.0f + THICKNESS)) {
-            m_RightPaddlePos.y = PADDLEH / 2.0f + THICKNESS;
-        }
-        else if (m_RightPaddlePos.y > 768.0f - PADDLEH / 2.0 - THICKNESS) {
-            m_RightPaddlePos.y = 769.0f - PADDLEH / 2.0 - THICKNESS;
-        }
-    }
-
-    m_BallPos.x += m_BallVel.x * deltaTime;
-    m_BallPos.y += m_BallVel.y * deltaTime;
-
-    // Revisar colisión con paredes
-    if ((m_BallPos.y <= THICKNESS && m_BallVel.y < 0.0f) ||
-        m_BallPos.y >= 768.0f - THICKNESS && m_BallVel.y > 0.0f)
-    {
-        m_BallVel.y *= -1;
-    }
-
-    // Revisar colisión contra la paleta
-    float diffL = m_LeftPaddlePos.y - m_BallPos.y;
-    float diffR = m_RightPaddlePos.y + m_BallPos.y;
-    diffL = (diffL > 0.0f) ? diffL : -diffL;
-    diffR = (diffR < 1024.0f) ? diffL : -diffL;
-    //Colision paleta izquierda
-    if (
-        (diffL <= PADDLEH / 2.0f &&
-            m_BallPos.x <= m_LeftPaddlePos.x + THICKNESS / 2.0f &&
-            m_BallPos.x >= m_LeftPaddlePos.x - THICKNESS / 2.0f &&
-            m_BallVel.x < 0.0f) ||
-        ((m_BallPos.x >= (1024 - THICKNESS) && m_BallPos.x > 0.0f))
-        )
-    {
-        m_BallVel.x *= -1.0f;
-    }
-    else if (m_BallPos.x <= 0.0f)
-    {
-        m_IsRunning = false;
-    }
-    //Colision paleta derecha
-    if (
-        (diffL <= PADDLEH / 2.0f &&
-            m_BallPos.x <= m_RightPaddlePos.x + THICKNESS / 2.0f &&
-            m_BallPos.x >= m_RightPaddlePos.x - THICKNESS / 2.0f &&
-            m_BallVel.x < 0.0f) ||
-        ((m_BallPos.x >= (1024 - THICKNESS) && m_BallPos.x > 0.0f))
-        )
-    {
-        m_BallVel.x *= -1.0f;
-    }
-    else if (m_BallPos.x >= 1024.0f)
-    {
-        m_IsRunning = false;
-    }
+	iter = std::find(m_Actors.begin(), m_Actors.end(), actor);
+	if (iter != m_Actors.end())
+	{
+		std::iter_swap(iter, m_Actors.end() - 1);
+		m_Actors.pop_back();
+	}
 }
 
-void Game::GenerateOutput(){
-    SDL_SetRenderDrawColor(
-        m_Renderer,
-        0,
-        0,
-        255,
-        255
-    );
+void Game::AddSprite(SpriteComponent* sprite)
+{
+	int myDrawOrder = sprite->GetDrawOrder();
+	auto iter = m_Sprites.begin();
+	for (; iter != m_Sprites.end(); ++iter)
+	{
+		if (myDrawOrder < (*iter)->GetDrawOrder())
+		{
+			break;
+		}
+	}
 
-    //Resetear el búfer de color indicado
-    SDL_RenderClear(m_Renderer);
+	m_Sprites.insert(iter, sprite);
+}
 
-    //Pintar paredes
+void Game::RemoveSprite(SpriteComponent* sprite)
+{
+	auto iter = std::find(m_Sprites.begin(), m_Sprites.end(), sprite);
+	m_Sprites.erase(iter);
+}
 
-    //Elegir color de los objetos
-    SDL_SetRenderDrawColor(
-        m_Renderer,
-        255,
-        255,
-        0,
-        255
-    );
-    SDL_Rect wall{
-        0,
-        0,
-        1024,
-        THICKNESS
-    };
+SDL_Texture* Game::GetTexture(const std::string& fileName)
+{
+	SDL_Texture* tex = nullptr;
+	auto iter = m_Textures.find(fileName);
+	if (iter != m_Textures.end())
+	{
+		tex = iter->second;
+	}
+	else
+	{
+		SDL_Surface* surf = IMG_Load(fileName.c_str());
+		if (!surf)
+		{
+			SDL_Log("Failed to load texture file %s ", SDL_GetError());
+			return nullptr;
+		}
 
-    SDL_RenderFillRect(m_Renderer, &wall);
+		tex = SDL_CreateTextureFromSurface(m_Renderer, surf);
+		SDL_FreeSurface(surf);
+		if (!tex)
+		{
+			SDL_Log("Failed to convert surface to texture for %s: ", fileName.c_str());
+			return nullptr;
+		}
 
-    wall.y = 768 - THICKNESS;
-    SDL_RenderFillRect(m_Renderer, &wall);
+		m_Textures.emplace(fileName.c_str(), tex);
+	}
 
-    wall.x = 1024 - THICKNESS;
-    wall.y = 0;
-    wall.w = THICKNESS;
-    wall.h = 768;
-    SDL_RenderFillRect(m_Renderer, &wall);
+	return tex;
+}
 
-    SDL_SetRenderDrawColor(
-        m_Renderer,
-        255,
-        0,
-        255,
-        255
-    );
+void Game::ProcessingInput()
+{
+	// Eventos de mouse
+	SDL_Event event;
 
-    SDL_Rect ball{
-        static_cast<int>(m_BallPos.x - THICKNESS / 2),
-        static_cast<int>(m_BallPos.y - THICKNESS / 2),
-        THICKNESS,
-        THICKNESS
-    };
+	// Revisamos todos los eventos de input que sucedieron entre la Ãºltima llamada a
+	// SDL_PollEvent y Ã©sta
+	while (SDL_PollEvent(&event))
+	{
+		switch (event.type)
+		{
+		case SDL_QUIT:
+			m_IsRunning = false;
+			break;
+		}
+	}
 
-    SDL_RenderFillRect(m_Renderer, &ball);
+	// Regresar el estado del teclado
+	const Uint8* state = SDL_GetKeyboardState(NULL);
+	if (state[SDL_SCANCODE_ESCAPE])
+	{
+		m_IsRunning = false;
+	}
 
-    SDL_Rect leftPaddle{
-        static_cast<int>(m_LeftPaddlePos.x - THICKNESS / 2),
-        static_cast<int>(m_LeftPaddlePos.y - PADDLEH / 2),
-        THICKNESS,
-        static_cast<int>(PADDLEH)
-    };
-    SDL_RenderFillRect(m_Renderer, &leftPaddle);
+	m_Ship->ProcessKeyboard(state);
+}
 
-    SDL_Rect rightPaddle{
-        static_cast<int>(m_RightPaddlePos.x - THICKNESS / 2),
-        static_cast<int>(m_RightPaddlePos.y - PADDLEH / 2),
-        THICKNESS,
-        static_cast<int>(PADDLEH)
-    };
-    SDL_RenderFillRect(m_Renderer, &rightPaddle);
+void Game::UpdateGame()
+{
+	// Frame limiting
+	// Nuestro objetivo es que el juego corra a 60fps.
+	// Esto significa que cada cuadro tiene que durar 16.6ms
+	while (!SDL_TICKS_PASSED(SDL_GetTicks(), m_TicksCount + 16));
 
-    //Cambiar el búfer de reserva por el búfer frontal
-    SDL_RenderPresent(m_Renderer);
+	float deltaTime = (SDL_GetTicks() - m_TicksCount) / 1000.0f;
+	m_TicksCount = SDL_GetTicks();
+
+	if (deltaTime > 0.05f)
+	{
+		deltaTime = 0.05;
+	}
+
+	m_UpdatingActors = true;
+	for (auto actor : m_Actors)
+	{
+		actor->Update(deltaTime);
+	}
+
+	for (auto pending : m_PendingActors)
+	{
+		m_Actors.emplace_back(pending);
+	}
+	m_PendingActors.clear();
+
+	std::vector<Actor*> deadActors;
+	for (auto actor : m_Actors)
+	{
+		if (actor->GetState() == Actor::EDead)
+		{
+			deadActors.emplace_back(actor);
+		}
+	}
+
+	for (auto actor : deadActors)
+	{
+		delete actor;
+	}
+}
+
+void Game::GenerateOutput()
+{
+	SDL_SetRenderDrawColor(
+		m_Renderer,
+		0,
+		0,
+		255,
+		255
+	);
+
+	// Resetear el bÃºfer al color indicado
+	SDL_RenderClear(m_Renderer);
+
+	for (auto sprite : m_Sprites)
+	{
+		sprite->Draw(m_Renderer);
+	}
+
+	SDL_RenderPresent(m_Renderer);
+}
+
+void Game::LoadData()
+{
+	m_Ship = new Ship(this);
+	m_Ship->SetPosition(Vector2(100.0f, 384.0f));
+	m_Ship->SetScale(1.5f);
+
+	Actor* temp = new Actor(this);
+	temp->SetPosition(Vector2(512.0f, 384.0f));
+	BGSpriteComponent* bg = new BGSpriteComponent(temp);
+	bg->SetScreenSize(Vector2(1024.0f, 768.0f));
+	std::vector<SDL_Texture*> bgTexs = {
+		GetTexture("Assets/Images2D/Farback01.png"),
+		GetTexture("Assets/Images2D/Farback02.png")
+	};
+	bg->SetBGTextures(bgTexs);
+	bg->SetScrollSpeed(-100.0f);
+
+	bg = new BGSpriteComponent(temp, 50);
+	bg->SetScreenSize(Vector2(1024.0f, 768.0f));
+	bgTexs = {
+		GetTexture("Assets/Images2D/Stars.png"),
+		GetTexture("Assets/Images2D/Stars.png")
+	};
+	bg->SetBGTextures(bgTexs);
+	bg->SetScrollSpeed(-200.0f);
+}
+
+void Game::UnloadData()
+{
+	while (!m_Actors.empty())
+	{
+		delete m_Actors.back();
+	}
+
+	for (auto i : m_Textures)
+	{
+		SDL_DestroyTexture(i.second);
+	}
+	m_Textures.clear();
 }

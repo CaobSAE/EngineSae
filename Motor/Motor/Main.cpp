@@ -1,11 +1,12 @@
 #include "Game.h"
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
 	Game game;
+	bool success = game.Initialize();
 
-	bool succes = game.Initialize();//Variable de validacion de carga de librerias
-
-	if (succes) {
+	if (success)
+	{
 		game.RunLoop();
 	}
 

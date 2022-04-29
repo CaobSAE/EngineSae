@@ -1,36 +1,48 @@
 #pragma once
 #include "SDL.h"
+#include "CMath.h"
+#include <vector>
+#include <SDL_image.h>
+#include <ostream>
+#include <unordered_map>
 
-struct Vector2
+class Game
 {
-	float x;
-	float y;
+public:
+	Game();
+
+	bool Initialize();
+	void RunLoop();
+	void Shutdown();
+
+	void AddActor(class Actor* actor);
+	void RemoveActor(class Actor* actor);
+
+	void AddSprite(class SpriteComponent* sprite);
+	void RemoveSprite(class SpriteComponent* sprite);
+
+	SDL_Texture* GetTexture(const std::string& fileName);
+private:
+	void ProcessingInput();
+	void UpdateGame();
+	void GenerateOutput();
+	void LoadData();
+	void UnloadData();
+
+	std::unordered_map<std::string, SDL_Texture*> m_Textures;
+
+	SDL_Window* m_Window;
+	SDL_Renderer* m_Renderer;
+
+	std::vector<class Actor*> m_Actors;
+	std::vector<class Actor*> m_PendingActors;
+	bool m_UpdatingActors;
+
+	bool m_IsRunning;
+	Uint32 m_TicksCount;
+
+	std::vector<class SpriteComponent*> m_Sprites;
+
+	// Game-specific
+	class Ship* m_Ship;
 };
-
-class Game{
-	public:
-		Game();
-
-		bool Initialize();
-		void RunLoop();
-		void Shutdown();
-	private:
-		void ProcessingInput();
-		void UpdateGame();
-		void GenerateOutput();
-
-		SDL_Window* m_Window;
-		SDL_Renderer* m_Renderer;
-
-		bool m_IsRunning;
-		Uint32 m_TicksCount;
-
-		//Game specific
-		Vector2 m_BallPos;
-		Vector2 m_BallVel;
-		Vector2 m_LeftPaddlePos;
-		Vector2 m_RightPaddlePos;
-		int m_LPaddleDir;
-		int m_RPaddleDir;
-};
-
