@@ -4,6 +4,7 @@
 #include "Ship.h"
 #include "BGSpriteComponent.h"
 #include "Asteroid.h"
+#include "GL/glew.h"
 
 Game::Game() :
 	m_Window(nullptr),
@@ -23,13 +24,34 @@ bool Game::Initialize()
 		return false;
 	}
 
+	SDL_GL_SetAttribute(
+		SDL_GL_CONTEXT_PROFILE_MASK,
+		SDL_GL_CONTEXT_PROFILE_CORE//cORE PARA APLIACCIONES DE ESCRITORIO
+	);
+
+	//Version openGL 3.3
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+
+	// Pedir un búfer de color de 8 bits para cada canal RGBA
+	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8); // 2 ^ 8 nos da la cantidad de valores distintos para este canal (0-255)
+	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+
+	// Activar double buffering
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
+	// Correr en GPU
+	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+
 	m_Window = SDL_CreateWindow(
 		"Motor SAE",
 		100,	// Coordenadas de x, esquina superior izquierda
 		100,	// Coordenadas de y, esquina superior izquierda
 		1024,   // Ancho de la pantalla
 		768,	// Altura de la pantalla
-		0		// Bandera (0 para ninguna bandera)	
+		SDL_WINDOW_OPENGL		// Bandera (0 para ninguna bandera)	
 	);
 
 	if (!m_Window)
@@ -37,6 +59,20 @@ bool Game::Initialize()
 		SDL_Log("Failed to create window: %s", SDL_GetError());
 		return false;
 	}
+
+	m_Context = SDL_GL_CreateContext(m_Window);
+
+	// Prevenir algunos errores de inicialización
+	glewExperimental = GL_TRUE;
+	if (glewInit() != GLEW_OK)
+	{
+		SDL_Log("Failed to initalize GLEW");
+		return false;
+	}
+
+	// Borrar ciertos errores benignos que hay en algunas plataformas
+	glGetError();
+
 
 	m_Renderer = SDL_CreateRenderer(
 		m_Window,

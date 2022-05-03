@@ -36,6 +36,7 @@ private:
 	std::unordered_map<std::string, SDL_Texture*> m_Textures;
 
 	SDL_Window* m_Window;
+	SDL_GLContext m_Context;
 	SDL_Renderer* m_Renderer;
 
 	std::vector<class Actor*> m_Actors;
