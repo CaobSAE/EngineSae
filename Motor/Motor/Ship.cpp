@@ -1,11 +1,11 @@
 #include "Ship.h"
 #include "Game.h"
 #include "AnimSpriteComponent.h"
+#include "InputComponent.h"
+#include "Laser.h"
 
 Ship::Ship(Game* game) :
-	Actor(game),
-	m_RightSpeed(0.0f),
-	m_DownSpeed(0.0f)
+	Actor(game)
 {
 	AnimSpriteComponent* asc = new AnimSpriteComponent(this);
 	std::vector<SDL_Texture*> anims = {
@@ -16,40 +16,30 @@ Ship::Ship(Game* game) :
 	};
 
 	asc->SetAnimTextures(anims);
+
+	InputComponent* ic = new InputComponent(this);
+	ic->SetForwardKey(SDL_SCANCODE_W);
+	ic->SetBackKey(SDL_SCANCODE_S);
+	ic->SetClockwiseKey(SDL_SCANCODE_A);
+	ic->SetCounterClockwiseKey(SDL_SCANCODE_D);
+	ic->SetMaxForward(300.0f);
+	ic->SetMaxAngular(CMath::TwoPi);
+	ic->SetScreenWrap(true);
 }
 
 void Ship::UpdateActor(float deltaTime)
 {
-	Actor::UpdateActor(deltaTime);
-	Vector2 pos = GetPosition();
-	pos.x += m_RightSpeed * deltaTime;
-	pos.y += m_DownSpeed * deltaTime;
-
-	SetPosition(pos);
+	m_LaserCooldown -= deltaTime;
 }
 
-void Ship::ProcessKeyboard(const uint8_t* state)
+void Ship::ActorInput(const uint8_t* keyState)
 {
-	m_RightSpeed = 0.0f;
-	m_DownSpeed = 0.0f;
-
-	if (state[SDL_SCANCODE_D])
+	if (keyState[SDL_SCANCODE_SPACE] && m_LaserCooldown <= 0.0f)
 	{
-		m_RightSpeed += 250.0f;
-	}
+		Laser* laser = new Laser(GetGame());
+		laser->SetPosition(GetPosition());
+		laser->SetRotation(GetRotation());
 
-	if (state[SDL_SCANCODE_A])
-	{
-		m_RightSpeed -= 250.0f;
-	}
-
-	if (state[SDL_SCANCODE_S])
-	{
-		m_DownSpeed += 300.0f;
-	}
-
-	if (state[SDL_SCANCODE_W])
-	{
-		m_DownSpeed -= 300.0f;
+		m_LaserCooldown = 0.5f;
 	}
 }

@@ -3,6 +3,7 @@
 #include "Actor.h"
 #include "Ship.h"
 #include "BGSpriteComponent.h"
+#include "Asteroid.h"
 
 Game::Game() :
 	m_Window(nullptr),
@@ -125,6 +126,20 @@ void Game::RemoveSprite(SpriteComponent* sprite)
 	m_Sprites.erase(iter);
 }
 
+void Game::AddAsteroid(Asteroid* ast)
+{
+	m_Asteroids.emplace_back(ast);
+}
+
+void Game::RemoveAsteroid(Asteroid* ast)
+{
+ 	auto iter = std::find(m_Asteroids.begin(), m_Asteroids.end(), ast);
+	if (iter != m_Asteroids.end())
+	{
+		m_Asteroids.erase(iter);
+	}
+}
+
 SDL_Texture* Game::GetTexture(const std::string& fileName)
 {
 	SDL_Texture* tex = nullptr;
@@ -180,7 +195,12 @@ void Game::ProcessingInput()
 		m_IsRunning = false;
 	}
 
-	m_Ship->ProcessKeyboard(state);
+	m_UpdatingActors = true;
+	for (auto actor : m_Actors)
+	{
+		actor->ProcessInput(state);
+	}
+	m_UpdatingActors = false;
 }
 
 void Game::UpdateGame()
@@ -203,6 +223,7 @@ void Game::UpdateGame()
 	{
 		actor->Update(deltaTime);
 	}
+	m_UpdatingActors = false;
 
 	for (auto pending : m_PendingActors)
 	{
@@ -211,7 +232,7 @@ void Game::UpdateGame()
 	m_PendingActors.clear();
 
 	std::vector<Actor*> deadActors;
-	for (auto actor : m_Actors)
+ 	for (auto actor : m_Actors)
 	{
 		if (actor->GetState() == Actor::EDead)
 		{
@@ -271,6 +292,12 @@ void Game::LoadData()
 	};
 	bg->SetBGTextures(bgTexs);
 	bg->SetScrollSpeed(-200.0f);
+
+	const int numAsteroids = 20;
+	for (int i = 0; i < numAsteroids; i++)
+	{
+		new Asteroid(this);
+	}
 }
 
 void Game::UnloadData()

@@ -22,7 +22,7 @@ void BGSpriteComponent::Update(float deltaTime)
 }
 
 void BGSpriteComponent::Draw(SDL_Renderer* renderer)
-{
+{ 
 	for (auto& bg : m_BGTextures)
 	{
 		SDL_Rect r;

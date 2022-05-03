@@ -31,10 +31,10 @@ void SpriteComponent::Draw(SDL_Renderer* renderer)
 		r.y = static_cast<int>(m_Owner->GetPosition().y - r.h / 2);
 
 		SDL_RenderCopyEx(
-			renderer,
+			renderer,									
 			m_Texture,
 			nullptr,									// Qué parte de la textura renderizar (nullptr para toda la textura)
-			&r,
+			&r,											
 			-CMath::ToDegrees(m_Owner->GetRotation()),	// Nosotres tenemos la rotación en radianes, SDL la pide en grados.
 			// Nosotres utilizamos el unit circle para definir la rotación. En el Unit Circle los valores positivos se encuentran
 			// en sentido opuesto de las manecillas del reloj. SDL los pide en el sentido de las manecillas del reloj. Por lo tanto
