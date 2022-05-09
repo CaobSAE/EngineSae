@@ -24,6 +24,15 @@ void MoveComponent::Update(float deltaTime)
 		Vector2 pos = m_Owner->GetPosition();
 		pos += m_Owner->GetForward() * m_ForwardSpeed * deltaTime;
 
+		/*
+			TAREA 1
+			Obtener mi aceleración utilizando masa y suma de fuerzas
+			Obtener la velocidad a partir de la aceleración
+			Aplicar el drag sobre la velocidad
+			Limitar la velocidad a la velocidad máxima
+			Obtener la nueva posición a partir de la velocidad
+		*/
+
 		if (m_ScreenWrap)
 		{
 			if (pos.x < 0.0f) { pos.x = 1024.0f; }

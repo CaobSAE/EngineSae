@@ -1,3 +1,16 @@
-﻿  Game.cpp
-D:\Sae\7mo trimestre\Motor de videojuegos\Motor\Motor\Game.cpp(254,19): warning C4305: '=': truncamiento de 'double' a 'float'
+﻿  Actor.cpp
+  AnimSpriteComponent.cpp
+  Asteroid.cpp
+  BGSpriteComponent.cpp
+  CircleComponent.cpp
+  Component.cpp
+  Game.cpp
+D:\Sae\7mo trimestre\Motor de videojuegos\Motor\Motor\Game.cpp(248,19): warning C4305: '=': truncamiento de 'double' a 'float'
+  InputComponent.cpp
+  Laser.cpp
+  MoveComponent.cpp
+  Shader.cpp
+  Ship.cpp
+  SpriteComponent.cpp
+  Generando código...
   Motor.vcxproj -> D:\Sae\7mo trimestre\Motor de videojuegos\Motor\x64\Debug\Motor.exe

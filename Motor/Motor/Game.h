@@ -5,6 +5,7 @@
 #include <SDL_image.h>
 #include <ostream>
 #include <unordered_map>
+#include "Shader.h"
 
 class Game
 {
@@ -30,6 +31,8 @@ private:
 	void ProcessingInput();
 	void UpdateGame();
 	void GenerateOutput();
+	bool LoadShaders();
+	void CreateSpriteVerts();
 	void LoadData();
 	void UnloadData();
 
@@ -47,6 +50,9 @@ private:
 	Uint32 m_TicksCount;
 
 	std::vector<class SpriteComponent*> m_Sprites;
+
+	class Shader* m_SpriteShader;
+	class VertexArray* m_SpriteVerts;
 
 	// Game-specific
 	class Ship* m_Ship;

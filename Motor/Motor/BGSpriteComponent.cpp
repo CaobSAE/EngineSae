@@ -1,5 +1,6 @@
 #include "BGSpriteComponent.h"
 #include "Actor.h"
+#include "Shader.h"
 
 BGSpriteComponent::BGSpriteComponent(Actor* owner, int drawOrder) :
 	SpriteComponent(owner, drawOrder),
@@ -21,22 +22,15 @@ void BGSpriteComponent::Update(float deltaTime)
 	}
 }
 
-void BGSpriteComponent::Draw(SDL_Renderer* renderer)
+void BGSpriteComponent::Draw(Shader* shader)
 { 
 	for (auto& bg : m_BGTextures)
 	{
-		SDL_Rect r;
-		r.w = static_cast<int>(m_ScreenSize.x);
-		r.h = static_cast<int>(m_ScreenSize.y);
-
-		r.x = static_cast<int>(m_Owner->GetPosition().x - r.w / 2 + bg.m_Offset.x);
-		r.y = static_cast<int>(m_Owner->GetPosition().y - r.h / 2 + bg.m_Offset.y);
-
-		SDL_RenderCopy(
-			renderer,
-			bg.m_Texture,
-			nullptr,			// Renderizar la textura completa
-			&r
+		glDrawElements(
+			GL_TRIANGLES,		//Tipo de poligono a dibujar
+			6,					//Cuantos indices hay en el bufer de indices
+			GL_UNSIGNED_INT,	//Tipo de cada indice
+			nullptr
 		);
 	}
 }

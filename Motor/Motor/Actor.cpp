@@ -7,7 +7,8 @@ Actor::Actor(Game* game) :
 	m_Position(Vector2::Zero),
 	m_Scale(1.0f),
 	m_Rotation(0.0f),
-	m_Game(game)
+	m_Game(game),
+	m_RecomputeWorldTransform(true)
 {
 	m_Game->AddActor(this);
 }
@@ -25,8 +26,12 @@ void Actor::Update(float deltaTime)
 {
 	if (m_State == EActive)
 	{
+		ComputeWorldTransform();
+
 		UpdateComponents(deltaTime);
 		UpdateActor(deltaTime);
+
+		ComputeWorldTransform();
 	}
 }
 
@@ -52,6 +57,21 @@ void Actor::ProcessInput(const uint8_t* keyState)
 		}
 
 		ActorInput(keyState);
+	}
+}
+
+void Actor::ComputeWorldTransform(){
+	if (m_RecomputeWorldTransform)
+	{
+		m_RecomputeWorldTransform = false;
+		// El orden es MUY IMPORTANTE (Escala primero, luego rotación y al final traslación)
+		m_WorldTransform = Matrix4::CreateScale(m_Scale);
+		m_WorldTransform *= Matrix4::CreateRotationZ(m_Rotation);
+		m_WorldTransform *= Matrix4::CreateTranslation(Vector3(m_Position.x, m_Position.y, 0.0f));
+
+		for (auto comp : m_Components){
+			comp->OnUpdateWorldTransform();
+		}
 	}
 }
 

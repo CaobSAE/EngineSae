@@ -5,6 +5,7 @@
 #include "BGSpriteComponent.h"
 #include "Asteroid.h"
 #include "GL/glew.h"
+#include "VertexArray.h"
 
 Game::Game() :
 	m_Window(nullptr),
@@ -14,8 +15,7 @@ Game::Game() :
 {
 }
 
-bool Game::Initialize()
-{
+bool Game::Initialize(){
 	int sdlResult = SDL_Init(SDL_INIT_VIDEO);
 
 	if (sdlResult != 0)
@@ -72,19 +72,13 @@ bool Game::Initialize()
 
 	// Borrar ciertos errores benignos que hay en algunas plataformas
 	glGetError();
-
-
-	m_Renderer = SDL_CreateRenderer(
-		m_Window,
-		-1,
-		SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
-	);
-
-	if (IMG_Init(IMG_INIT_PNG) == 0)
-	{
-		SDL_Log("Unable to initialize SDL_Image: %s", SDL_GetError());
+	
+	if (!LoadShaders()) {
+		SDL_Log("Failes to load Shaders");
 		return false;
 	}
+
+	CreateSpriteVerts();
 
 	LoadData();
 
@@ -106,9 +100,9 @@ void Game::RunLoop()
 void Game::Shutdown()
 {
 	UnloadData();
-	IMG_Quit();
+	delete m_SpriteVerts;
+	SDL_GL_DeleteContext(m_Context);
 	SDL_DestroyWindow(m_Window);
-	SDL_DestroyRenderer(m_Renderer);
 	SDL_Quit();
 }
 
@@ -261,50 +255,65 @@ void Game::UpdateGame()
 	}
 	m_UpdatingActors = false;
 
-	for (auto pending : m_PendingActors)
-	{
+	for (auto pending : m_PendingActors){
+		pending->ComputeWorldTransform();
 		m_Actors.emplace_back(pending);
 	}
 	m_PendingActors.clear();
 
 	std::vector<Actor*> deadActors;
- 	for (auto actor : m_Actors)
-	{
-		if (actor->GetState() == Actor::EDead)
-		{
+ 	for (auto actor : m_Actors){
+		if (actor->GetState() == Actor::EDead){
 			deadActors.emplace_back(actor);
 		}
 	}
 
-	for (auto actor : deadActors)
-	{
+	for (auto actor : deadActors){
 		delete actor;
 	}
 }
 
-void Game::GenerateOutput()
-{
-	SDL_SetRenderDrawColor(
-		m_Renderer,
-		0,
-		0,
-		255,
-		255
-	);
+void Game::GenerateOutput(){
+	//Resetear el bufer a un color 
+	glClearColor(0.86f, 0.86f, 0.86f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
 
-	// Resetear el búfer al color indicado
-	SDL_RenderClear(m_Renderer);
+	m_SpriteShader->SetActive();
+	m_SpriteVerts->SetActive();
 
 	for (auto sprite : m_Sprites)
 	{
-		sprite->Draw(m_Renderer);
+		sprite->Draw(m_SpriteShader);
 	}
 
-	SDL_RenderPresent(m_Renderer);
+	SDL_GL_SwapWindow(m_Window);
 }
 
-void Game::LoadData()
-{
+bool Game::LoadShaders(){
+	m_SpriteShader = new Shader();
+	if (!m_SpriteShader ->Load("Transform.vert", "Basic.frag")) {
+		return false;
+	}
+	return true;
+}
+
+void Game::CreateSpriteVerts(){
+	float vertices[] = {
+		-0.5f, 0.5f, 0.5f,
+		0.5f, 0.5f, 0.f,
+		0.5f, -0.5f, 0.f,
+		-0.5f, -0.5f, 0.f
+	};
+
+	unsigned int indices[] = {
+		0, 1, 2,
+		2, 3, 0
+	};
+
+	m_SpriteVerts = new VertexArray(vertices, 4, indices, 6);
+}
+
+void Game::LoadData(){
 	m_Ship = new Ship(this);
 	m_Ship->SetPosition(Vector2(100.0f, 384.0f));
 	m_Ship->SetScale(1.5f);

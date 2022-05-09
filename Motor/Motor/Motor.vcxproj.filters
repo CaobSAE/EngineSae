@@ -57,6 +57,12 @@
     <ClInclude Include="Laser.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
+    <ClInclude Include="VertexArray.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="Shader.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Game.cpp">
@@ -104,5 +110,22 @@
     <ClCompile Include="Laser.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
+    <ClCompile Include="VertexArray.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
+    <ClCompile Include="Shader.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Basic.frag">
+      <Filter>Archivos de origen</Filter>
+    </None>
+    <None Include="Basic.vert">
+      <Filter>Archivos de origen</Filter>
+    </None>
+    <None Include="Transform.vert">
+      <Filter>Archivos de origen</Filter>
+    </None>
   </ItemGroup>
 </Project>
